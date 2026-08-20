@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Truth Box - Send me a message</title>
+  <style>
+    :root {
+      --bg-color: #0f0f13;
+      --card-bg: #1a1a24;
+      --accent: #ff3366;
+      --text: #ffffff;
+      --subtext: #a0a0b0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-color); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+
+    .container { width: 100%; max-width: 440px; background: var(--card-bg); border-radius: 20px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 20px; }
+
+    .profile-section { text-align: center; }
+    .avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #ff3366, #ff6b6b); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 32px; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    p { font-size: 13px; color: var(--subtext); }
+
+    /* Transparency Warning Banner */
+    .warning-box { background: rgba(255, 51, 102, 0.1); border: 1px solid rgba(255, 51, 102, 0.3); padding: 10px 14px; border-radius: 10px; font-size: 12px; color: #ff80ab; line-height: 1.4; text-align: center; }
+
+    textarea { width: 100%; height: 120px; background: #121217; border: 1px solid #333; border-radius: 12px; padding: 14px; color: var(--text); font-size: 15px; resize: none; outline: none; }
+    textarea:focus { border-color: var(--accent); }
+
+    .send-btn { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
+    .send-btn:hover { opacity: 0.9; }
+
+    /* Owner Dashboard Section (Hidden by default unless toggled) */
+    #dashboard { display: none; margin-top: 20px; border-top: 1px solid #333; padding-top: 20px; }
+    .msg-card { background: #121217; padding: 12px; border-radius: 10px; margin-bottom: 10px; font-size: 14px; border-left: 4px solid var(--accent); }
+    .meta-tag { font-size: 11px; color: #00e676; margin-top: 6px; font-family: monospace; display: block; }
+    
+    .toggle-dash { background: none; border: none; color: var(--subtext); font-size: 11px; cursor: pointer; text-align: center; margin-top: 10px; text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="profile-section">
+      <div class="avatar">🤫</div>
+      <h1>Send me a anonymous message!</h1>
+      <p>Ask me anything or leave a confession...</p>
+    </div>
+
+    <!-- Clear, honest disclaimer -->
+    <div class="warning-box">
+      ⚠️ <strong>Heads up:</strong> This isn't 100% anonymous. Your message text is hidden from the public, but your IP address and device info are logged and shown directly to the owner!
+    </div>
+
+    <form id="form" onsubmit="sendMessage(event)">
+      <textarea id="message-input" placeholder="Type your secret message here..." required></textarea>
+      <button type="submit" class="send-btn" id="submit-btn">Send Message ✈️</button>
+    </form>
+
+    <div id="success-msg" style="display:none; text-align:center; color: #00e676; font-weight:bold; padding: 20px;">
+      ✨ Message sent successfully!
+    </div>
+
+    <button class="toggle-dash" onclick="toggleDashboard()">🔒 Owner Dashboard (Toggle)</button>
+
+    <!-- Owner View -->
+    <div id="dashboard">
+      <h3 style="font-size: 14px; margin-bottom: 10px; color: var(--accent);">Incoming Inbox & Logs</h3>
+      <div id="inbox-list">No messages yet.</div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const form = document.getElementById('form');
+    const messageInput = document.getElementById('message-input');
+    const submitBtn = document.getElementById('submit-btn');
+    const successMsg = document.getElementById('success-msg');
+    const inboxList = document.getElementById('inbox-list');
+    let allMessages = [];
+
+    function sendMessage(e) {
+      e.preventDefault();
+      const text = messageInput.value.trim();
+      if (text) {
+        socket.emit('send secret', text);
+        form.style.display = 'none';
+        successMsg.style.display = 'block';
+      }
+    }
+
+    socket.on('load messages', (msgs) => {
+      allMessages = msgs;
+      renderInbox();
+    });
+
+    socket.on('new secret', (msg) => {
+      allMessages.unshift(msg);
+      renderInbox();
+    });
+
+    function renderInbox() {
+      if (allMessages.length === 0) {
+        inboxList.innerHTML = 'No messages yet.';
+        return;
+      }
+      let html = '';
+      allMessages.forEach(m => {
+        html += `
+          <div class="msg-card">
+            <div>${m.text}</div>
+            <span class="meta-tag">📍 IP: ${m.ip} | 🕒 ${m.time}</span>
+            <span class="meta-tag" style="color: #ff9800; font-size: 10px;">📱 ${m.device}</span>
+          </div>
+        `;
+      });
+      inboxList.innerHTML = html;
+    }
+
+    function toggleDashboard() {
+      const dash = document.getElementById('dashboard');
+      dash.style.display = dash.style.display === 'block' ? 'none' : 'block';
+    }
+  </script>
+</body>
+</html>
