@@ -12,11 +12,13 @@ app.get('/', (req, res) => {
 
 let messages = [];
 
+// SET YOUR SECRET ADMIN PASSWORD HERE
+const ADMIN_PASSWORD = "mypassword123"; 
+
 io.on('connection', (socket) => {
   const clientIp = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
 
-  socket.emit('load messages', messages);
-
+  // Handle incoming messages from users
   socket.on('send secret', (data) => {
     if (!data.text || data.text.trim() === '') return;
 
@@ -30,7 +32,19 @@ io.on('connection', (socket) => {
     };
 
     messages.unshift(newMessage);
-    io.emit('new secret', newMessage);
+    
+    // Broadcast ONLY to sockets that have successfully logged into the admin panel
+    io.to('admin-room').emit('new secret', newMessage);
+  });
+
+  // Handle admin login attempt
+  socket.on('admin login', (password) => {
+    if (password === ADMIN_PASSWORD) {
+      socket.join('admin-room'); // Put this socket into the private admin room
+      socket.emit('admin success', messages); // Send messages ONLY to you
+    } else {
+      socket.emit('admin error', 'Incorrect password!');
+    }
   });
 });
 
